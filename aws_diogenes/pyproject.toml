@@ -1,0 +1,23 @@
+[project]
+name = "aws_diogenes"
+version = "0.1.0"
+description = "aws_diogenes using crewAI"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "crewai[tools]==1.10.1",
+    "pydantic==2.11.10"
+]
+
+[project.scripts]
+kickoff = "aws_diogenes.main:kickoff"
+run_crew = "aws_diogenes.main:kickoff"
+plot = "aws_diogenes.main:plot"
+run_with_trigger = "aws_diogenes.main:run_with_trigger"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.crewai]
+type = "flow"
