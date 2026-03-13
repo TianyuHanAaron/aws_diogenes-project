@@ -1,20 +1,102 @@
 [
   {
+    "post_id": "post_0",
     "user_id": "demo_user",
-    "author": "@alice",
     "trusted": true,
-    "content": "I'm moving to Singapore next month for a new job."
+    "location": "user_city",
+    "author": "@ryanweaver",
+    "platform": "facebook",
+    "content": "Pressure include reach occur painting organization quite design page eat.",
+    "timestamp": "2026-03-08T11:25:18.470341"
   },
   {
+    "post_id": "post_1",
     "user_id": "demo_user",
-    "author": "@city_transit",
     "trusted": true,
-    "content": "The downtown rail line will be closed for maintenance this weekend."
+    "location": "user_city",
+    "author": "@ryanweaver",
+    "platform": "facebook",
+    "content": "Movie thing green tree mind skin state skin key recent may.",
+    "timestamp": "2026-03-12T10:19:34.395627"
   },
   {
-    "user_id": "other_user",
-    "author": "@unknown_account",
+    "post_id": "post_2",
+    "user_id": "demo_user",
+    "trusted": true,
+    "location": "user_city",
+    "author": "@morganmichael",
+    "platform": "facebook",
+    "content": "Enjoy company develop any over part happen arm too treatment cultural.",
+    "timestamp": "2026-03-09T03:41:52.408404"
+  },
+  {
+    "post_id": "post_3",
+    "user_id": "demo_user",
     "trusted": false,
-    "content": "Check out this unbelievable investment opportunity."
+    "location": "user_city",
+    "author": "@alex63",
+    "platform": "wechat",
+    "content": "Brother TV section administration among individual until mention end strong loss.",
+    "timestamp": "2026-03-09T03:11:13.620523"
+  },
+  {
+    "post_id": "post_4",
+    "user_id": "demo_user",
+    "trusted": false,
+    "location": "user_city",
+    "author": "@alex63",
+    "platform": "wechat",
+    "content": "Civil hot eat best bar image one stage local share management gun carry by know.",
+    "timestamp": "2026-03-11T23:14:47.393896"
+  },
+  {
+    "post_id": "post_5",
+    "user_id": "demo_user",
+    "trusted": false,
+    "location": "user_city",
+    "author": "@alex63",
+    "platform": "facebook",
+    "content": "Almost sing artist along trouble energy idea knowledge place PM check network war civil.",
+    "timestamp": "2026-03-08T08:21:58.357750"
+  },
+  {
+    "post_id": "post_6",
+    "user_id": "demo_user",
+    "trusted": false,
+    "location": "user_city",
+    "author": "@alex63",
+    "platform": "x",
+    "content": "Suddenly more way lay audience election those.",
+    "timestamp": "2026-03-13T11:31:24.982901"
+  },
+  {
+    "post_id": "post_7",
+    "user_id": "demo_user",
+    "trusted": false,
+    "location": "user_city",
+    "author": "@michaelhansen",
+    "platform": "wechat",
+    "content": "Scientist view city foot employee participant few pass pattern art.",
+    "timestamp": "2026-03-09T13:39:10.500314"
+  },
+  {
+    "post_id": "post_8",
+    "user_id": "user_8",
+    "trusted": false,
+    "location": "user_city",
+    "author": "@alex63",
+    "platform": "wechat",
+    "content": "Especially big often human others friend finally fish control culture toward continue after.",
+    "timestamp": "2026-03-10T10:46:20.408077"
+  },
+  {
+    "post_id": "post_9",
+    "user_id": "user_9",
+    "trusted": false,
+    "location": "user_city",
+    "author": "@michaelhansen",
+    "platform": "facebook",
+    "content": "Receive do spring bar me performance reduce crime difficult yet may economic around thus although good.",
+    "timestamp": "2026-03-07T12:11:57.362064"
   }
 ]

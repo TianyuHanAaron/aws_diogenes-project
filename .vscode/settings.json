@@ -1,5 +1,9 @@
 {
   "python.defaultInterpreterPath": ".venv/bin/python",
+  "python.languageServer": "Pylance",
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.diagnosticMode": "workspace",
   "python.terminal.activateEnvironment": true,
-  "python.venvPath": "."
+  "python.venvPath": ".",
+  "mypy-type-checker.enabled": false
 }

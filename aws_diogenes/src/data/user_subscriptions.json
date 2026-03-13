@@ -1,0 +1,13 @@
+{
+  "user_id": "demo_user",
+  "channels": [
+    "LOCAL",
+    "GLOBAL",
+    "INVESTMENT"
+  ],
+  "interest_topics": [
+    "astronomy",
+    "archaeology",
+    "natural science"
+  ]
+}

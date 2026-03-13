@@ -1,12 +1,20 @@
 [
   {
+    "event": "Perseid Meteor Shower",
     "location": "user_city",
-    "event": "Autumn migration period",
-    "date_range": "March to May"
+    "date_range": "Aug 11\u2013Aug 13",
+    "description": "Meteor shower caused by debris from comet Swift\u2013Tuttle."
   },
   {
+    "event": "Jacaranda Blossom Season",
     "location": "sydney",
-    "event": "Autumn bird migration activity",
-    "date_range": "March to May"
+    "date_range": "October",
+    "description": "Jacaranda trees bloom across the city."
+  },
+  {
+    "event": "Spring Bird Migration",
+    "location": "sydney",
+    "date_range": "September",
+    "description": "Many bird species migrate across the region."
   }
 ]

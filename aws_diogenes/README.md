@@ -1,56 +1,57 @@
-# {{crew_name}} Crew
+# aws_diogenes
 
-Welcome to the {{crew_name}} Crew project, powered by [crewAI](https://crewai.com). This template is designed to help you set up a multi-agent AI system with ease, leveraging the powerful and flexible framework provided by crewAI. Our goal is to enable your agents to collaborate effectively on complex tasks, maximizing their collective intelligence and capabilities.
+`aws_diogenes` is a crewAI flow that collects news, trusted social posts, seasonal events, and local photos, then produces a curated email digest plus a trusted-posts summary artifact.
 
-## Installation
+## Setup
 
-Ensure you have Python >=3.10 <3.14 installed on your system. This project uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
+Use Python `>=3.10,<3.14`.
 
-First, if you haven't already, install uv:
-
-```bash
-pip install uv
-```
-
-Next, navigate to your project directory and install the dependencies:
-
-(Optional) Lock the dependencies and install them by using the CLI command:
-```bash
-crewai install
-```
-
-### Customizing
-
-**Add your `OPENAI_API_KEY` into the `.env` file**
-
-- Modify `src/aws_diogenes/config/agents.yaml` to define your agents
-- Modify `src/aws_diogenes/config/tasks.yaml` to define your tasks
-- Modify `src/aws_diogenes/crew.py` to add your own logic, tools and specific args
-- Modify `src/aws_diogenes/main.py` to add custom inputs for your agents and tasks
-
-## Running the Project
-
-To kickstart your flow and begin execution, run this from the root folder of your project:
+Install dependencies with your preferred tool. For example:
 
 ```bash
-crewai run
+uv sync
 ```
 
-This command initializes the aws_diogenes Flow as defined in your configuration.
+## Required Environment Variables
 
-This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
+The runtime tools expect these environment variables:
 
-## Understanding Your Crew
+```bash
+export NEWSAPI_API_KEY=your_newsapi_key
+export AWS_REGION=ap-southeast-2
+export AWS_SES_SOURCE_EMAIL=verified-sender@example.com
+```
 
-The aws_diogenes Crew is composed of multiple AI agents, each with unique roles, goals, and tools. These agents collaborate on a series of tasks, defined in `config/tasks.yaml`, leveraging their collective skills to achieve complex objectives. The `config/agents.yaml` file outlines the capabilities and configurations of each agent in your crew.
+Notes:
 
-## Support
+- `NEWSAPI_API_KEY` is required by the news fetch tool.
+- `AWS_REGION` or `AWS_DEFAULT_REGION` is recommended for SES/SNS clients.
+- `AWS_SES_SOURCE_EMAIL` is required only when using the SES send tool.
 
-For support, questions, or feedback regarding the {{crew_name}} Crew or crewAI.
+## Running
 
-- Visit our [documentation](https://docs.crewai.com)
-- Reach out to us through our [GitHub repository](https://github.com/joaomdmoura/crewai)
-- [Join our Discord](https://discord.com/invite/X4JWnZnxPb)
-- [Chat with our docs](https://chatg.pt/DWjSBZn)
+From the project root:
 
-Let's create wonders together with the power and simplicity of crewAI.
+```bash
+uv run kickoff
+```
+
+Or pass a trigger payload:
+
+```bash
+uv run run_with_trigger '{"location":"sydney","topic":"energy transition","user_id":"demo_user"}'
+```
+
+## Outputs
+
+Running the flow writes:
+
+- `curated_email.html`
+- `trusted_posts_digest.txt`
+
+## Project Layout
+
+- `src/aws_diogenes/main.py`: flow entrypoint
+- `src/aws_diogenes/crews/trust_posts/`: trusted-post processing crew
+- `src/aws_diogenes/crews/curated_emails/`: digest generation crew
+- `src/aws_diogenes/tools/`: data fetch and delivery tools

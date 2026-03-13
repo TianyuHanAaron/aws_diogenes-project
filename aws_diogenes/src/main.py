@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 from pathlib import Path
 
 from pydantic import BaseModel, Field
@@ -14,7 +15,10 @@ from tools.fetch_seasonal_events_tool import FetchSeasonalEventsTool
 from tools.fetch_local_photos_tool import FetchLocalPhotosTool
 
 
+APP_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = Path.cwd()
+CREWAI_STORAGE_DIR = APP_DIR / ".crewai_storage"
+os.environ.setdefault("CREWAI_STORAGE_DIR", str(CREWAI_STORAGE_DIR))
 
 
 class Messages(BaseModel):
@@ -52,7 +56,14 @@ class MessagesFlow(Flow[Messages]):
             user_id = crewai_trigger_payload.get("user_id", user_id)
             trusted_contacts = crewai_trigger_payload.get("trusted_contacts", trusted_contacts)
 
-        self.state.news = fetch_news.run(topic=topic)
+        try:
+            self.state.news = fetch_news.run(topic=topic)
+        except RuntimeError as exc:
+            if "NEWSAPI_API_KEY is not set" in str(exc):
+                print("NEWSAPI_API_KEY is not set; continuing with no news articles.")
+                self.state.news = []
+            else:
+                raise
         self.state.posts = fetch_posts.run(user_id=user_id)
         self.state.trusted_contacts = trusted_contacts
         self.state.seasonal_events = fetch_events.run(location=location)

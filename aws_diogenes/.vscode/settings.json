@@ -1,6 +1,10 @@
 {
   "python.defaultInterpreterPath": "../.venv/bin/python",
+  "python.languageServer": "Pylance",
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.diagnosticMode": "workspace",
   "python.terminal.activateEnvironment": true,
+  "mypy-type-checker.enabled": false,
   "python.analysis.extraPaths": [
     "${workspaceFolder}/src"
   ]
