@@ -1,0 +1,173 @@
+  seasonal_event_detection_task:
+    description: >
+      Using the user's location and the current date, identify seasonal or celestial
+      events relevant to the region. Examples include meteor showers, festivals,
+      flower blooming seasons, or bird migrations.
+    expected_output: >
+      JSON list of relevant seasonal events.
+
+      Example:
+      [
+        {
+          "event": "Perseid Meteor Shower",
+          "date_range": "Aug 11–Aug 13"
+        }
+      ]
+    agent: seasonal_event_agent
+
+
+  seasonal_event_explanation_task:
+    description: >
+      Provide a short factual explanation describing the identified seasonal or
+      celestial event. The explanation should explain what the event is and why
+      it occurs without using emotional or promotional language.
+    expected_output: >
+      A one-sentence explanation for each event.
+
+      Example:
+      "The Perseid meteor shower occurs when Earth passes through debris from comet Swift–Tuttle."
+    agent: seasonal_event_agent
+    context: 
+    - seasonal_event_detection_task
+
+
+  classify_channel_task:
+    description: >
+      Analyze the article and assign it to one of four channels:
+
+      GLOBAL – international events affecting multiple countries, such as political 
+      events (international and domestic), military event, economic events, socioeconomic events, major policy changes.
+      LOCAL – events occurring in the user's city or region, such as local policy update, local community event,
+      local environmental event update.
+      INVESTMENT – economic developments or potential investment opportunities, such as trend in stock market,
+      bond market, EFT market, derivative market, real estate market or cyrptocurrency market etc.
+      INTEREST – topics matching the user's selected interests, generate the new update for whatever field user given,
+      such as archeaological discovery, scientific discovery,or  new book / music / movie/ video game release etc.
+
+      Choose the most appropriate channel based on geographic scope,
+      economic implications, and subject matter.
+    expected_output: >
+      JSON object indicating the selected channel.
+
+      Example:
+      {
+        "channel": "GLOBAL"
+      }
+    agent: channel_classifier_agent
+
+
+  explain_event_task:
+    description: >
+      Rewrite the article content into a clear factual explanation describing
+      the main event. Remove sensational or emotional wording and focus only
+      on what occurred, where it happened, and what actions were taken.
+      The explanation should contain two to three sentences.
+    expected_output: >
+      Neutral event explanation.
+
+      Example:
+      "European regulators introduced draft legislation governing high-risk artificial intelligence systems."
+    agent: event_explanation_agent
+    context:
+    - classify_channel_task
+
+
+
+
+  generate_context_task:
+    description: >
+      Provide historical, political, or scientific background information that
+      helps readers understand the broader significance of the event. Include
+      only information that directly explains the context of the event.
+    expected_output: >
+      Two or three sentences explaining relevant background context.
+
+      Example:
+      "Regulation of artificial intelligence has become a growing policy concern as machine learning systems expand into healthcare and finance."
+    agent: context_agent
+    context:
+    - explain_event_task
+
+
+  explain_concepts_task:
+    description: >
+      Identify important technical or historical terms mentioned in the article
+      and provide concise definitions that help readers understand the topic.
+      Only include concepts that are necessary for comprehension.
+    expected_output: >
+      JSON list of concept definitions.
+
+      Example:
+      [
+        {
+          "term": "Transformer",
+          "definition": "A neural network architecture designed to process sequences using attention mechanisms."
+        }
+      ]
+    agent: concept_agent
+    context:
+    - generate_context_task
+
+
+  photo_ranking_task:
+    description: >
+      Analyze a collection of local photographs using visual reasoning.
+      Evaluate aesthetic quality based on composition, lighting, clarity,
+      and relevance to the city's atmosphere. Rank the images and select
+      the top five photographs representing local scenes.
+    expected_output: >
+      JSON list of selected photos ranked by quality.
+
+      Example:
+      [
+        {"rank": 1, "photo_id": "p21"},
+        {"rank": 2, "photo_id": "p07"}
+      ]
+    agent: photo_analysis_agent
+
+
+  photo_caption_task:
+    description: >
+      Generate a short factual caption describing the content of each selected
+      photograph. The caption should identify the location or scene without
+      adding personal opinions or emotional language.
+    expected_output: >
+      One-sentence caption.
+
+      Example:
+      "Sunset over the harbor skyline viewed from the city waterfront."
+    agent: photo_analysis_agent
+    context:
+    - photo_ranking_task
+
+
+  compose_digest_task:
+    description: >
+      Assemble the final email briefing. The layout must follow this structure:
+
+      1. Current date
+      2. Email title
+      3. Seasonal and celestial events
+      4. User-selected channels (GLOBAL, LOCAL, INVESTMENT, INTEREST)
+      5. Local street photographs with captions
+
+      Each news item should include a title, event explanation,
+      background context, and key concept definitions.
+      The tone must remain factual and neutral.
+    expected_output: >
+      Structured digest formatted for email.
+
+      Example sections:
+      DATE
+      TITLE
+      SEASONAL EVENTS
+      GLOBAL
+      LOCAL
+      INVESTMENT
+      INTEREST
+      LOCAL STREET PHOTOS
+    agent: digest_composer_agent
+    context:
+    - seasonal_event_explanation_task
+    - explain_concepts_task
+    - photo_caption_task

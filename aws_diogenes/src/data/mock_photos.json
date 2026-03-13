@@ -1,0 +1,17 @@
+[
+  {
+    "photo_id": "p01",
+    "location": "user_city",
+    "scene": "city waterfront at sunset"
+  },
+  {
+    "photo_id": "p02",
+    "location": "user_city",
+    "scene": "local market street"
+  },
+  {
+    "photo_id": "p03",
+    "location": "sydney",
+    "scene": "harbour shoreline in late afternoon"
+  }
+]

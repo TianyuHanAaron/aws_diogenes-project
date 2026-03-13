@@ -1,0 +1,20 @@
+[
+  {
+    "user_id": "demo_user",
+    "author": "@alice",
+    "trusted": true,
+    "content": "I'm moving to Singapore next month for a new job."
+  },
+  {
+    "user_id": "demo_user",
+    "author": "@city_transit",
+    "trusted": true,
+    "content": "The downtown rail line will be closed for maintenance this weekend."
+  },
+  {
+    "user_id": "other_user",
+    "author": "@unknown_account",
+    "trusted": false,
+    "content": "Check out this unbelievable investment opportunity."
+  }
+]
