@@ -14,7 +14,7 @@ from tools.fetch_news_tool import FetchNewsTool
 tool = FetchNewsTool()
 
 with patch.dict(os.environ, {"NEWSAPI_API_KEY": "", "NEWS_API_KEY": ""}, clear=False):
-    result = tool.run(topic="technology")
+    result = tool.run(query="technology")
 
 
 if __name__ == "__main__":

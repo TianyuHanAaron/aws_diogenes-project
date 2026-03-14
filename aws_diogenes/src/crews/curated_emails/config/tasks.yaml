@@ -1,173 +1,136 @@
-  seasonal_event_detection_task:
-    description: >
-      Using the user's location and the current date, identify seasonal or celestial
-      events relevant to the region. Examples include meteor showers, festivals,
-      flower blooming seasons, or bird migrations.
-    expected_output: >
-      JSON list of relevant seasonal events.
+seasonal_event_detection_task:
+  description: >
+    Use the provided `seasonal_events` input that has already been collected for
+    the user's location `{location}`, hemisphere `{hemisphere}`, and month
+    `{month}`. Detect the most relevant current seasonal event information from
+    that input.
 
-      Example:
-      [
-        {
-          "event": "Perseid Meteor Shower",
-          "date_range": "Aug 11–Aug 13"
-        }
-      ]
-    agent: seasonal_event_agent
+    Include:
+    - festivals and holidays
+    - meteor showers, eclipses, conjunctions, and other celestial events
+    - flower blossom seasons
+    - bird migration seasons
+    - other natural seasonal phenomena
 
+    Filter events according to hemisphere where relevant. For example, blossom or
+    seasonal references should match the user's hemisphere and month.
 
-  seasonal_event_explanation_task:
-    description: >
-      Provide a short factual explanation describing the identified seasonal or
-      celestial event. The explanation should explain what the event is and why
-      it occurs without using emotional or promotional language.
-    expected_output: >
-      A one-sentence explanation for each event.
+  expected_output: >
+    JSON list of detected events.
 
-      Example:
-      "The Perseid meteor shower occurs when Earth passes through debris from comet Swift–Tuttle."
-    agent: seasonal_event_agent
-    context: 
+    Example:
+    [
+      {
+        "event": "Perseid Meteor Shower",
+        "type": "celestial",
+        "date_range": "Aug 11-Aug 13",
+        "location_relevance": "global"
+      }
+    ]
+
+  agent: seasonal_event_agent
+
+seasonal_event_interpretation_task:
+  description: >
+    For each detected seasonal event, produce a structured explanation that
+    includes the event name, date or date range, origin, associated customs
+    where relevant, and the scientific or ecological cause of the event.
+
+    Keep the tone educational, calm, and suitable for a daily digest.
+
+  expected_output: >
+    JSON list of enriched seasonal event descriptions.
+
+  agent: seasonal_event_interpretation_agent
+  context:
     - seasonal_event_detection_task
 
+seasonal_event_curator_task:
+  description: >
+    Review the interpreted seasonal events and select the most relevant ones for
+    the user's digest.
 
-  classify_channel_task:
-    description: >
-      Analyze the article and assign it to one of four channels:
+    Prioritize:
+    - events happening now or very soon
+    - events strongly relevant to the user's location
+    - events with clear cultural or scientific significance
+    - variety across celestial, ecological, and festival categories
 
-      GLOBAL – international events affecting multiple countries, such as political 
-      events (international and domestic), military event, economic events, socioeconomic events, major policy changes.
-      LOCAL – events occurring in the user's city or region, such as local policy update, local community event,
-      local environmental event update.
-      INVESTMENT – economic developments or potential investment opportunities, such as trend in stock market,
-      bond market, EFT market, derivative market, real estate market or cyrptocurrency market etc.
-      INTEREST – topics matching the user's selected interests, generate the new update for whatever field user given,
-      such as archeaological discovery, scientific discovery,or  new book / music / movie/ video game release etc.
+    Keep the final list concise and suitable for the opening section of the
+    email digest.
 
-      Choose the most appropriate channel based on geographic scope,
-      economic implications, and subject matter.
-    expected_output: >
-      JSON object indicating the selected channel.
+  expected_output: >
+    JSON list of curated seasonal events ready for email insertion.
 
-      Example:
-      {
-        "channel": "GLOBAL"
-      }
-    agent: channel_classifier_agent
+  agent: seasonal_event_curator_agent
+  context:
+    - seasonal_event_interpretation_task
 
+photo_ranking_task:
+  description: >
+    Analyze the provided `photos` input for the location `{location}`. Evaluate
+    aesthetic quality based on composition, lighting, clarity, and relevance to
+    the city's atmosphere.
 
-  explain_event_task:
-    description: >
-      Rewrite the article content into a clear factual explanation describing
-      the main event. Remove sensational or emotional wording and focus only
-      on what occurred, where it happened, and what actions were taken.
-      The explanation should contain two to three sentences.
-    expected_output: >
-      Neutral event explanation.
+    Rank the images and select the top photographs representing local scenes.
 
-      Example:
-      "European regulators introduced draft legislation governing high-risk artificial intelligence systems."
-    agent: event_explanation_agent
-    context:
-    - classify_channel_task
+  expected_output: >
+    JSON list of selected photos ranked by quality.
 
+  agent: photo_analysis_agent
 
+photo_caption_task:
+  description: >
+    Generate a short factual caption describing the content of each selected
+    photograph. The caption should identify the location or scene without adding
+    personal opinions or emotional language. Use the already provided photo data
+    and do not ask the user for the location again.
 
+  expected_output: >
+    One sentence caption for each selected photo.
 
-  generate_context_task:
-    description: >
-      Provide historical, political, or scientific background information that
-      helps readers understand the broader significance of the event. Include
-      only information that directly explains the context of the event.
-    expected_output: >
-      Two or three sentences explaining relevant background context.
-
-      Example:
-      "Regulation of artificial intelligence has become a growing policy concern as machine learning systems expand into healthcare and finance."
-    agent: context_agent
-    context:
-    - explain_event_task
-
-
-  explain_concepts_task:
-    description: >
-      Identify important technical or historical terms mentioned in the article
-      and provide concise definitions that help readers understand the topic.
-      Only include concepts that are necessary for comprehension.
-    expected_output: >
-      JSON list of concept definitions.
-
-      Example:
-      [
-        {
-          "term": "Transformer",
-          "definition": "A neural network architecture designed to process sequences using attention mechanisms."
-        }
-      ]
-    agent: concept_agent
-    context:
-    - generate_context_task
-
-
-  photo_ranking_task:
-    description: >
-      Analyze a collection of local photographs using visual reasoning.
-      Evaluate aesthetic quality based on composition, lighting, clarity,
-      and relevance to the city's atmosphere. Rank the images and select
-      the top five photographs representing local scenes.
-    expected_output: >
-      JSON list of selected photos ranked by quality.
-
-      Example:
-      [
-        {"rank": 1, "photo_id": "p21"},
-        {"rank": 2, "photo_id": "p07"}
-      ]
-    agent: photo_analysis_agent
-
-
-  photo_caption_task:
-    description: >
-      Generate a short factual caption describing the content of each selected
-      photograph. The caption should identify the location or scene without
-      adding personal opinions or emotional language.
-    expected_output: >
-      One-sentence caption.
-
-      Example:
-      "Sunset over the harbor skyline viewed from the city waterfront."
-    agent: photo_analysis_agent
-    context:
+  agent: photo_analysis_agent
+  context:
     - photo_ranking_task
 
+city_landmarks_task:
+  description: >
+    Review the provided `landmarks` input and select three landmark webcam
+    snapshots that best represent the current atmosphere of `{location}`.
 
-  compose_digest_task:
-    description: >
-      Assemble the final email briefing. The layout must follow this structure:
+    Prioritize:
+    - famous landmarks or skyline views
+    - waterfront or beach views if they are iconic for the city
+    - clear current-view snapshots suitable for an email digest
 
-      1. Current date
-      2. Email title
-      3. Seasonal and celestial events
-      4. User-selected channels (GLOBAL, LOCAL, INVESTMENT, INTEREST)
-      5. Local street photographs with captions
+  expected_output: >
+    JSON object containing three landmarks with image URLs and links to live
+    streams.
 
-      Each news item should include a title, event explanation,
-      background context, and key concept definitions.
-      The tone must remain factual and neutral.
-    expected_output: >
-      Structured digest formatted for email.
+  agent: live_camera_agent
 
-      Example sections:
-      DATE
-      TITLE
-      SEASONAL EVENTS
-      GLOBAL
-      LOCAL
-      INVESTMENT
-      INTEREST
-      LOCAL STREET PHOTOS
-    agent: digest_composer_agent
-    context:
-    - seasonal_event_explanation_task
-    - explain_concepts_task
+compose_digest_task:
+  description: >
+    Assemble the final email briefing using the following structure:
+
+    1. Current date
+    2. Email title
+    3. Seasonal and celestial events
+    4. Live city landmarks
+    5. User-selected news channels using the provided news input directly
+    6. Local street photographs
+
+    Use the provided `news`, `channels`, `interests`, `seasonal_events`,
+    `landmarks`, and photo outputs to create a coherent HTML email digest for
+    `{location}`.
+    The tone must remain factual, neutral, and suitable for a high-quality
+    knowledge digest.
+
+  expected_output: >
+    Structured digest formatted as HTML for email delivery.
+
+  agent: digest_composer_agent
+  context:
+    - seasonal_event_curator_task
+    - city_landmarks_task
     - photo_caption_task

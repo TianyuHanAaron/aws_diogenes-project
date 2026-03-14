@@ -1,0 +1,7 @@
+crewai[bedrock,tools]==1.10.1
+pydantic==2.11.10
+requests>=2.32.0,<3
+boto3>=1.39.0,<2
+feedparser>=6.0.12,<7
+python-dotenv>=1.0.1,<2
+firecrawl-py>=2.16.2,<3

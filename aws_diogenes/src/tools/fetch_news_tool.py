@@ -1,57 +1,141 @@
-import os
-from typing import Dict, List, Type
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field, model_validator
+from typing import List, Dict, Type
+import logging
 
 import requests
+import feedparser
 
-from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+from settings import NEWSAPI_API_KEY, GUARDIAN_KEY
 
-from tools._data import load_mock_data
+
+logger = logging.getLogger(__name__)
 
 
 class FetchNewsInput(BaseModel):
-    topic: str = Field(..., description="News search topic")
+    query: str = Field(default="", description="Topic to search for news")
+    topic: str = Field(default="", description="Backward-compatible alias for query")
+
+    @model_validator(mode="after")
+    def ensure_query(self):
+        if not self.query and self.topic:
+            self.query = self.topic
+        if not self.query:
+            raise ValueError("query is required")
+        return self
 
 
 class FetchNewsTool(BaseTool):
 
     name: str = "fetch_news"
-    description: str = "Fetch news articles from API or mock dataset"
-
+    description: str = "Retrieve news from multiple APIs and RSS feeds"
     args_schema: Type[BaseModel] = FetchNewsInput
 
-    def _run(self, topic: str) -> List[Dict]:
+    def fetch_newsapi(self, query):
 
-        api_key = os.getenv("NEWSAPI_API_KEY") or os.getenv("NEWS_API_KEY")
+        url = "https://newsapi.org/v2/everything"
 
-        if api_key:
-            try:
-                response = requests.get(
-                    "https://newsapi.org/v2/everything",
-                    params={
-                        "q": topic,
-                        "language": "en",
-                        "pageSize": 20,
-                        "apiKey": api_key
-                    },
-                    timeout=10
-                )
+        params = {
+            "q": query,
+            "apiKey": NEWSAPI_API_KEY,
+            "pageSize": 20,
+            "language": "en"
+        }
 
-                if response.status_code == 200:
-                    data = response.json()
+        r = requests.get(url, params=params)
+        data = r.json()
 
-                    articles = []
+        articles = []
 
-                    for a in data.get("articles", []):
-                        articles.append({
-                            "title": a["title"],
-                            "content": a["description"],
-                            "source": a["source"]["name"]
-                        })
+        for item in data.get("articles", []):
 
-                    return articles
+            articles.append({
+                "title": item.get("title"),
+                "summary": item.get("description"),
+                "url": item.get("url"),
+                "source": item.get("source", {}).get("name"),
+                "published": item.get("publishedAt")
+            })
 
-            except Exception:
-                pass
+        return articles
 
-        return load_mock_data("mock_news.json")
+
+    def fetch_guardian(self, query):
+
+        url = "https://content.guardianapis.com/search"
+
+        params = {
+            "q": query,
+            "api-key": GUARDIAN_KEY,
+            "page-size": 20
+        }
+
+        r = requests.get(url, params=params)
+        data = r.json()
+
+        results = data.get("response", {}).get("results", [])
+
+        articles = []
+
+        for item in results:
+
+            articles.append({
+                "title": item.get("webTitle"),
+                "summary": "",
+                "url": item.get("webUrl"),
+                "source": "Guardian",
+                "published": item.get("webPublicationDate")
+            })
+
+        return articles
+
+
+    def fetch_rss(self):
+
+        feeds = [
+            "https://feeds.bbci.co.uk/news/rss.xml",
+            "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
+            "https://www.reutersagency.com/feed/"
+        ]
+
+        articles = []
+
+        for url in feeds:
+
+            feed = feedparser.parse(url)
+
+            for entry in feed.entries:
+
+                articles.append({
+                    "title": entry.get("title"),
+                    "summary": entry.get("summary"),
+                    "url": entry.get("link"),
+                    "source": feed.feed.get("title"),
+                    "published": entry.get("published", "")
+                })
+
+        return articles
+
+
+    def _run(self, query: str = "", topic: str = "") -> List[Dict]:
+
+        query = query or topic
+
+        results = []
+
+        try:
+            results.extend(self.fetch_newsapi(query))
+        except Exception as exc:
+            logger.warning("NewsAPI fetch failed for %s: %s", query, exc)
+
+        try:
+            results.extend(self.fetch_guardian(query))
+        except Exception as exc:
+            logger.warning("Guardian fetch failed for %s: %s", query, exc)
+
+        try:
+            results.extend(self.fetch_rss())
+        except Exception as exc:
+            logger.warning("RSS fetch failed: %s", exc)
+
+        return results

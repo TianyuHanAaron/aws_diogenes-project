@@ -1,6 +1,6 @@
 # aws_diogenes
 
-`aws_diogenes` is a crewAI flow that collects news, trusted social posts, seasonal events, and local photos, then produces a curated email digest plus a trusted-posts summary artifact.
+`aws_diogenes` is a crewAI flow that collects news, seasonal events, and local photos, then produces a curated email digest.
 
 ## Setup
 
@@ -39,7 +39,7 @@ uv run kickoff
 Or pass a trigger payload:
 
 ```bash
-uv run run_with_trigger '{"location":"sydney","topic":"energy transition","user_id":"demo_user"}'
+uv run run_with_trigger '{"location":"sydney","hemisphere":"southern","topic":"energy transition","channels":["global","interest"],"interests":["astronomy"]}'
 ```
 
 ## Outputs
@@ -47,11 +47,47 @@ uv run run_with_trigger '{"location":"sydney","topic":"energy transition","user_
 Running the flow writes:
 
 - `curated_email.html`
-- `trusted_posts_digest.txt`
+
+When running in AWS Lambda, the file is written to `/tmp/curated_email.html`.
+
+## AWS Scheduling
+
+This repo includes a Lambda entrypoint and AWS SAM template for scheduled runs
+with EventBridge Scheduler.
+
+Key files:
+
+- `src/lambda_handler.py`
+- `template.yaml`
+- `requirements.txt`
+
+Typical deployment flow:
+
+```bash
+sam build
+sam deploy --guided
+```
+
+Important:
+
+- the Lambda is packaged as a container image, not a zip archive
+- Docker must be installed and running for `sam build`
+- SAM will build from `Dockerfile` and push the image during deploy
+
+The template provisions:
+
+- one Lambda function that runs the digest
+- one EventBridge Scheduler schedule
+- one IAM role allowing the schedule to invoke Lambda
+
+Before deploying, authenticate to AWS and provide the required API keys and
+sender email as SAM parameter values or stack configuration.
+
+For seasonal event search, this deployment expects `FIRECRAWL_API_KEY` instead
+of `OPENAI_API_KEY`.
 
 ## Project Layout
 
 - `src/aws_diogenes/main.py`: flow entrypoint
-- `src/aws_diogenes/crews/trust_posts/`: trusted-post processing crew
 - `src/aws_diogenes/crews/curated_emails/`: digest generation crew
 - `src/aws_diogenes/tools/`: data fetch and delivery tools

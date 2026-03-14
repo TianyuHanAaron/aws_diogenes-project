@@ -1,0 +1,11 @@
+.git
+.aws-sam
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+tests
+uv.lock
+samconfig.toml

@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Scheduled personalized digest delivery with Lambda and EventBridge Scheduler.
+
+Parameters:
+  ScheduleExpression:
+    Type: String
+    Default: cron(0 7 * * ? *)
+  ScheduleTimezone:
+    Type: String
+    Default: Australia/Sydney
+  DefaultLocation:
+    Type: String
+    Default: sydney
+  DefaultHemisphere:
+    Type: String
+    Default: southern
+  DefaultTopic:
+    Type: String
+    Default: general news
+  DefaultChannels:
+    Type: String
+    Default: global,interest
+  DefaultInterests:
+    Type: String
+    Default: astronomy
+  DefaultEmail:
+    Type: String
+    Default: ''
+  NewsApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+  GuardianKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+  PexelsApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+  UnsplashAccessKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+  PixabayKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+  FirecrawlApiKey:
+    Type: String
+    NoEcho: true
+    Default: ''
+  AwsSesSourceEmail:
+    Type: String
+
+
+Resources:
+  DigestFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: .
+      DockerTag: python3.12-v1
+    Properties:
+      PackageType: Image
+      Architectures:
+        - arm64
+      Timeout: 900
+      MemorySize: 2048
+      Environment:
+        Variables:
+          AWS_SES_SOURCE_EMAIL: !Ref AwsSesSourceEmail
+          NEWSAPI_API_KEY: !Ref NewsApiKey
+          GUARDIAN_KEY: !Ref GuardianKey
+          PEXELS_API_KEY: !Ref PexelsApiKey
+          UNSPLASH_ACCESS_KEY: !Ref UnsplashAccessKey
+          PIXABAY_KEY: !Ref PixabayKey
+          FIRECRAWL_API_KEY: !Ref FirecrawlApiKey
+          DEFAULT_LOCATION: !Ref DefaultLocation
+          DEFAULT_HEMISPHERE: !Ref DefaultHemisphere
+          DEFAULT_TOPIC: !Ref DefaultTopic
+          DEFAULT_CHANNELS: !Ref DefaultChannels
+          DEFAULT_INTERESTS: !Ref DefaultInterests
+          DEFAULT_EMAIL: !Ref DefaultEmail
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:InvokeModelWithResponseStream
+              Resource: '*'
+
+  DigestSchedulerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeDigestLambda
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: !GetAtt DigestFunction.Arn
+
+  DigestSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      FlexibleTimeWindow:
+        Mode: 'OFF'
+      ScheduleExpression: !Ref ScheduleExpression
+      ScheduleExpressionTimezone: !Ref ScheduleTimezone
+      State: ENABLED
+      Target:
+        Arn: !GetAtt DigestFunction.Arn
+        RoleArn: !GetAtt DigestSchedulerRole.Arn
+        Input: !Sub |
+          {
+            "location": "${DefaultLocation}",
+            "hemisphere": "${DefaultHemisphere}",
+            "topic": "${DefaultTopic}",
+            "channels": ["global", "interest"],
+            "interests": ["astronomy"],
+            "email": "${DefaultEmail}"
+          }
+
+Outputs:
+  DigestFunctionName:
+    Value: !Ref DigestFunction
+  DigestFunctionArn:
+    Value: !GetAtt DigestFunction.Arn
+  DigestScheduleName:
+    Value: !Ref DigestSchedule

@@ -41,35 +41,6 @@ def generate_news(count=20):
     return news
 
 
-def generate_posts(count=10):
-
-    posts = []
-    platforms = ["x", "facebook", "wechat"]
-    trusted_authors = [f"@{fake.user_name()}" for _ in range(3)]
-    other_authors = [f"@{fake.user_name()}" for _ in range(2)]
-
-    for i in range(count):
-        is_demo_user = i < count - 2
-        user_id = DEFAULT_USER_ID if is_demo_user else f"user_{i}"
-        trusted = is_demo_user and i < len(trusted_authors)
-        author_pool = trusted_authors if trusted else other_authors
-
-        posts.append({
-            "post_id": f"post_{i}",
-            "user_id": user_id,
-            "trusted": trusted,
-            "location": DEFAULT_LOCATION,
-            "author": f"@{fake.user_name()}",
-            "platform": random.choice(platforms),
-            "content": fake.sentence(nb_words=12),
-            "timestamp": fake.date_time_between(start_date="-7d", end_date="now").isoformat()
-        })
-
-        posts[-1]["author"] = random.choice(author_pool)
-
-    return posts
-
-
 def generate_photos(count=15):
 
     photos = []
@@ -125,14 +96,6 @@ def generate_seasonal_events():
     return events
 
 
-def generate_trusted_contacts(posts):
-    trusted_accounts = sorted({post["author"] for post in posts if post["trusted"]})
-    return {
-        "user_id": DEFAULT_USER_ID,
-        "trusted_accounts": trusted_accounts
-    }
-
-
 def generate_user_profile():
 
     return [{
@@ -166,13 +129,9 @@ def save_json(filename, data):
 
 
 def main():
-    posts = generate_posts()
-
     save_json("mock_news.json", generate_news())
-    save_json("mock_posts.json", posts)
     save_json("mock_photos.json", generate_photos())
     save_json("mock_seasonal_events.json", generate_seasonal_events())
-    save_json("trusted_contacts.json", generate_trusted_contacts(posts))
     save_json("user_profiles.json", generate_user_profile())
     save_json("user_subscriptions.json", generate_user_subscriptions())
 

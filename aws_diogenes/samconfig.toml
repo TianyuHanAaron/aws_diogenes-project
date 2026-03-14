@@ -1,0 +1,14 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "aws-diogenes-digest"
+resolve_s3 = true
+s3_prefix = "aws-diogenes-digest"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+parameter_overrides = "ScheduleExpression=\"cron(0 7 * * ? *)\" ScheduleTimezone=\"Australia/Sydney\" DefaultLocation=\"sydney\" DefaultHemisphere=\"southern\" DefaultTopic=\"general news\" DefaultChannels=\"global,interest\" DefaultInterests=\"astronomy\" DefaultEmail=\"hyyhtyhty@gmail.com\" AwsSesSourceEmail=\"hyyhtyhty@gmail.com\""
+image_repositories = ["DigestFunction=908133483082.dkr.ecr.ap-southeast-2.amazonaws.com/awsdiogenec52d8e5c/digestfunctionbe8e4b33repo"]
+
+[default.global.parameters]
+region = "ap-southeast-2"
