@@ -1,3 +1,6 @@
+"""Return randomized webcam landmarks for the world-at-glance section."""
+
+import asyncio
 import random
 from typing import Dict, List, Type
 
@@ -5,47 +8,67 @@ from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
 
-CITY_WEBCAMS = {
-    "sydney": [
-        {
-            "name": "Sydney Opera House and Harbour Bridge",
-            "image": "https://images.webcamsydney.com/sydney-harbour.jpg",
-            "stream": "https://www.webcamsydney.com/",
-        },
-        {
-            "name": "Bondi Beach",
-            "image": "https://bondisurfclub.com/wp-content/uploads/bondi-surf-cam.jpg",
-            "stream": "https://bondisurfclub.com/bondi-surf-cam/",
-        },
-        {
-            "name": "Manly Beach",
-            "image": "https://worldcam.eu/webcams/australia-oceania/sydney/35769-manly-beach.jpg",
-            "stream": "https://worldcam.eu/webcams/australia-oceania/sydney/35769-manly-beach",
-        },
-    ],
-    "paris": [
-        {
-            "name": "Eiffel Tower",
-            "image": "https://static.skylinewebcams.com/webcam/france/ile-de-france/paris/eiffel-tower.jpg",
-            "stream": "https://www.skylinewebcams.com/en/webcam/france/ile-de-france/paris/eiffel-tower.html",
-        },
-        {
-            "name": "Notre Dame Cathedral",
-            "image": "https://static.skylinewebcams.com/webcam/france/paris/notre-dame.jpg",
-            "stream": "https://www.skylinewebcams.com/en/webcam/france/paris/notre-dame.html",
-        },
-        {
-            "name": "Montmartre",
-            "image": "https://static.skylinewebcams.com/webcam/france/paris/montmartre.jpg",
-            "stream": "https://www.skylinewebcams.com/en/webcam/france/paris/montmartre.html",
-        },
-    ],
-}
-
 GLOBAL_FALLBACK_LANDMARKS = [
-    landmark
-    for city_landmarks in CITY_WEBCAMS.values()
-    for landmark in city_landmarks
+    {
+        "name": "Sydney Opera House and Harbour Bridge",
+        "image": "https://images.webcamsydney.com/sydney-harbour.jpg",
+        "stream": "https://www.webcamsydney.com/",
+    },
+    {
+        "name": "Bondi Beach",
+        "image": "https://bondisurfclub.com/wp-content/uploads/bondi-surf-cam.jpg",
+        "stream": "https://bondisurfclub.com/bondi-surf-cam/",
+    },
+    {
+        "name": "Manly Beach",
+        "image": "https://worldcam.eu/webcams/australia-oceania/sydney/35769-manly-beach.jpg",
+        "stream": "https://worldcam.eu/webcams/australia-oceania/sydney/35769-manly-beach",
+    },
+    {
+        "name": "Eiffel Tower",
+        "image": "",
+        "stream": "https://www.earthcam.com/world/france/paris/?cam=toureiffel",
+    },
+    {
+        "name": "Times Square",
+        "image": "",
+        "stream": "https://www.earthcam.com/usa/newyork/timessquare/?cam=tsrobo1",
+    },
+    {
+        "name": "Venice Grand Canal",
+        "image": "",
+        "stream": "https://www.earthcam.com/world/italy/venice/",
+    },
+    {
+        "name": "Tokyo Shibuya Crossing",
+        "image": "",
+        "stream": "https://www.earthcam.com/world/japan/tokyo/?cam=shibuya",
+    },
+    {
+        "name": "Dublin Temple Bar",
+        "image": "",
+        "stream": "https://www.earthcam.com/world/ireland/dublin/?cam=templebar",
+    },
+    {
+        "name": "Istanbul Hagia Sophia",
+        "image": "",
+        "stream": "https://www.earthcam.com/world/turkey/istanbul/?cam=hagiasophia",
+    },
+    {
+        "name": "Rome Trevi Fountain",
+        "image": "",
+        "stream": "https://www.skylinewebcams.com/en/webcam/italia/lazio/roma/fontana-di-trevi.html",
+    },
+    {
+        "name": "New Orleans Bourbon Street",
+        "image": "",
+        "stream": "https://www.earthcam.com/usa/louisiana/neworleans/bourbonstreet/",
+    },
+    {
+        "name": "Niagara Falls",
+        "image": "",
+        "stream": "https://www.earthcam.com/world/canada/niagarafalls/",
+    },
 ]
 
 
@@ -55,17 +78,23 @@ class CityCameraInput(BaseModel):
 
 class FetchCityLandmarksTool(BaseTool):
     name: str = "fetch_city_landmarks"
-    description: str = "Retrieve three live landmark webcams for a city"
+    description: str = "Retrieve three live landmark webcams from around the world"
     args_schema: Type[BaseModel] = CityCameraInput
 
+    def _shuffled_landmarks(self) -> List[Dict]:
+        """Return the global fallback pool in randomized order."""
+        webcams = GLOBAL_FALLBACK_LANDMARKS[:]
+        random.SystemRandom().shuffle(webcams)
+        return webcams
+
     def _run(self, location: str) -> Dict:
+        """Return a small randomized set of landmark webcam links."""
         city = (location or "").strip().lower()
-        webcams = CITY_WEBCAMS.get(city, [])
-        if not webcams:
-            shuffled = GLOBAL_FALLBACK_LANDMARKS[:]
-            random.Random(city or "world").shuffle(shuffled)
-            webcams = shuffled[:3]
         return {
             "city": city,
-            "landmarks": webcams[:3],
+            "landmarks": self._shuffled_landmarks()[:6],
         }
+
+    async def arun(self, location: str) -> Dict:
+        """Run the landmark fetch without blocking the event loop."""
+        return await asyncio.to_thread(self.run, location=location)

@@ -5,3 +5,5 @@ boto3>=1.39.0,<2
 feedparser>=6.0.12,<7
 python-dotenv>=1.0.1,<2
 firecrawl-py>=2.16.2,<3
+PyYAML>=6.0.2,<7
+questionary>=2.1.1,<3

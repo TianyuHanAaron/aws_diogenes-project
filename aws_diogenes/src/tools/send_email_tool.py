@@ -1,3 +1,4 @@
+import asyncio
 from crewai.tools import BaseTool
 import os
 from typing import Type
@@ -45,3 +46,12 @@ class SendEmailTool(BaseTool):
             raise RuntimeError(f"SES send failed: {exc}") from exc
 
         return "Email sent successfully"
+
+    async def arun(self, to_email: str, subject: str, html_body: str) -> str:
+        """Run the SES send without blocking the event loop."""
+        return await asyncio.to_thread(
+            self.run,
+            to_email=to_email,
+            subject=subject,
+            html_body=html_body,
+        )

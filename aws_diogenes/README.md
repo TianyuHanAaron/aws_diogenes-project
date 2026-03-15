@@ -1,6 +1,6 @@
 # aws_diogenes
 
-`aws_diogenes` is a crewAI flow that collects news, seasonal events, and local photos, then produces a curated email digest.
+`aws_diogenes` is a digest generator that collects news, seasonal events, webcams, and local photos, then renders a curated HTML email.
 
 ## Setup
 
@@ -42,13 +42,31 @@ Or pass a trigger payload:
 uv run run_with_trigger '{"location":"sydney","hemisphere":"southern","topic":"energy transition","channels":["global","interest"],"interests":["astronomy"]}'
 ```
 
+For the local interactive CLI:
+
+```bash
+uv run run_cli
+```
+
+If you are running directly from the source tree or inside the Docker image:
+
+```bash
+python -m cli
+```
+
+For a locally built Docker image, run the CLI interactively with a TTY, for example:
+
+```bash
+docker run --rm -it --entrypoint python <your-image-tag> -m cli
+```
+
 ## Outputs
 
 Running the flow writes:
 
-- `curated_email.html`
+- `email_digest.html`
 
-When running in AWS Lambda, the file is written to `/tmp/curated_email.html`.
+When running in AWS Lambda, the file is written to `/tmp/email_digest.html`.
 
 ## AWS Scheduling
 
@@ -88,6 +106,9 @@ of `OPENAI_API_KEY`.
 
 ## Project Layout
 
-- `src/aws_diogenes/main.py`: flow entrypoint
-- `src/aws_diogenes/crews/curated_emails/`: digest generation crew
-- `src/aws_diogenes/tools/`: data fetch and delivery tools
+- `src/main.py`: flow entrypoint
+- `src/services/digest_pipeline.py`: orchestration and HTML rendering
+- `src/crews/news_digest/`: YAML-driven news section prompts
+- `src/crews/seasonal_events/`: YAML-driven seasonal section prompts
+- `src/crews/photo_album/`: YAML-driven photo album prompts
+- `src/tools/`: data fetch and delivery tools

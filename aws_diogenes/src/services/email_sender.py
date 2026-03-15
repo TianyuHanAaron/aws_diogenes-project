@@ -1,3 +1,4 @@
+import asyncio
 import boto3
 import os
 import re
@@ -6,7 +7,7 @@ import re
 def _html_to_text(html_body: str) -> str:
     text = re.sub(r"<[^>]+>", " ", html_body)
     text = re.sub(r"\s+", " ", text).strip()
-    return text or "Daily Knowledge Digest"
+    return text or "Diogenes Sunlight Post"
 
 
 def send_digest_email(receiver_email: str, subject: str, body: str):
@@ -43,3 +44,8 @@ def send_digest_email(receiver_email: str, subject: str, body: str):
     )
 
     return response
+
+
+async def send_digest_email_async(receiver_email: str, subject: str, body: str):
+    """Send the digest email without blocking the event loop."""
+    return await asyncio.to_thread(send_digest_email, receiver_email, subject, body)

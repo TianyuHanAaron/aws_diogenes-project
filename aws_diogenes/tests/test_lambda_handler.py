@@ -23,10 +23,10 @@ def test_lambda_handler_uses_event_payload():
     }
     context = SimpleNamespace(aws_request_id="req-123")
 
-    with patch("lambda_handler.run_digest") as run_digest:
+    with patch("main.run_email_flow") as run_email_flow:
         response = handler(event, context)
 
-    run_digest.assert_called_once_with(event)
+    run_email_flow.assert_called_once_with(event)
     body = json.loads(response["body"])
     assert response["statusCode"] == 200
     assert body["ok"] is True

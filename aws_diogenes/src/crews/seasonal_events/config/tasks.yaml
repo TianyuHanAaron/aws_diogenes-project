@@ -1,0 +1,169 @@
+seasonal_calendar_identification_task:
+  description: >
+    The current local date is `{current_date}` and the review window ends on
+    `{window_end_date}`. Identify exactly two upcoming named festivals,
+    observances, or public holidays that fall on or after the current date and
+    on or before the review-window end date.
+
+    Rules:
+    - prefer globally recognized upcoming festivals or observances
+    - do not mention past events
+    - do not mention expired city anniversaries
+    - return exactly two festivals when possible
+    - the output festivals do not have to be tied to `{location}`
+
+  expected_output: >
+    JSON array with exactly two festival objects. Each item must contain:
+    - `title`
+    - `date_window`
+    - `region`
+    - `event_type`
+    - `why_relevant`
+
+  guardrail: >
+    Return only valid JSON and two upcoming named festivals or observances.
+    Never return a festival that has already passed relative to `{current_date}`.
+
+  agent: seasonal_calendar_agent
+
+seasonal_customs_research_task:
+  description: >
+    Research the identified festivals. For each one explain:
+    - its origin or historical basis
+    - the customs or practices associated with it
+    - the regions or communities that actively celebrate it
+
+    Keep the writing factual and specific.
+
+  expected_output: >
+    JSON array of enriched festival objects. Each item must contain:
+    - `title`
+    - `origin_story`
+    - `customs`
+    - `regions_that_celebrate`
+    - `timing_context`
+
+  guardrail: >
+    Return only valid JSON. Keep the same two named festivals and add factual
+    customs, origin_story, and regional context.
+
+  agent: seasonal_customs_agent
+  context:
+    - seasonal_calendar_identification_task
+
+seasonal_flora_research_task:
+  description: >
+    Determine exactly one flora or bloom-season highlight that fits the user's
+    current date. The flora item should be globally recognizable and seasonally
+    appropriate around `{current_date}`.
+
+    Explain:
+    - the flora name or bloom season title
+    - why it fits the current seasonal window
+    - the visual or ecological character of the season
+    - any cultural or public significance attached to it
+
+  expected_output: >
+    JSON object with:
+    - `title`
+    - `seasonal_basis`
+    - `description`
+    - `cultural_significance`
+
+  guardrail: >
+    Return only valid JSON and only one flora highlight that is seasonally
+    appropriate for the user's date. Prefer a globally recognizable seasonal
+    bloom or flora season rather than a hyper-local plant.
+
+  agent: seasonal_flora_agent
+
+seasonal_summary_task:
+  description: >
+    Convert the researched festivals and the researched flora highlight into
+    three digest-ready paragraphs.
+
+    Requirements:
+    - two paragraphs for the festivals
+    - one paragraph for the flora
+    - each paragraph should be complete but concise
+    - aim for roughly 55 to 85 words per entry
+    - use this variation angle for the writing order and emphasis:
+      `{variation_angle}`
+    - let `{variation_seed}` push you toward a slightly different factual
+      emphasis than a previous run, but do not change the underlying facts
+    - the festival paragraph must explain what the event is, where it is
+      celebrated, and how it is commonly marked
+    - the flora paragraph must explain what the flora is, why it is seasonal
+      now, and its cultural significance
+    - when the same festival or flora could appear in another run, vary the
+      sentence order and which factual detail is introduced first
+
+  expected_output: >
+    JSON array of exactly three entries. Each entry must contain:
+    - `title`
+    - `badge`
+    - `paragraph`
+
+  guardrail: >
+    Return only valid JSON. Output exactly three entries: two upcoming festivals
+    and one seasonal flora highlight. Keep the paragraphs brief, informative,
+    and clearly shorter than the current long seasonal essays.
+
+  agent: seasonal_summary_agent
+  context:
+    - seasonal_customs_research_task
+    - seasonal_flora_research_task
+
+seasonal_final_review_task:
+  description: >
+    Review the draft seasonal entries and prepare the final set for layout.
+
+    Rules:
+    - keep exactly three entries whenever possible
+    - keep exactly two upcoming festivals or observances and one flora entry
+    - remove any event that has already passed relative to `{current_date}`
+    - remove generic placeholders, directory labels, or non-event titles
+    - keep each paragraph concise, factual, and clearly readable in an email
+    - keep festival entries clearly identified as festivals or observances
+    - keep the flora entry clearly identified as flora or bloom season
+    - preserve strong titles and short informative paragraphs
+    - preserve the requested variation angle `{variation_angle}` so repeated
+      runs do not all read with the same cadence
+    - vary phrasing and ordering from common stock explanations, while keeping
+      every statement factual and grounded in the researched entry
+
+  expected_output: >
+    JSON array of exactly three reviewed entries. Each entry must contain:
+    - `title`
+    - `badge`
+    - `paragraph`
+
+  guardrail: >
+    Return only valid JSON. Output exactly two upcoming festivals and one flora
+    highlight, all concise and publishable.
+
+  agent: seasonal_final_review_agent
+  context:
+    - seasonal_summary_task
+
+seasonal_layout_task:
+  description: >
+    Format the three seasonal digest entries into final HTML blocks for insertion
+    into the email template. Use one event block per entry with this structure:
+    - `div.event`
+    - `span.badge`
+    - a strong title
+    - a full paragraph
+
+    Output only the HTML fragment.
+
+  expected_output: >
+    HTML fragment containing exactly three event blocks.
+
+  guardrail: >
+    Return only HTML. The fragment must contain exactly three event blocks: two
+    festival entries and one flora highlight.
+
+  agent: seasonal_layout_agent
+  context:
+    - seasonal_final_review_task

@@ -1,0 +1,1 @@
+"""Seasonal events crew package."""

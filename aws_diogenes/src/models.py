@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -20,6 +20,7 @@ class UserRequest(BaseModel):
 class NewsItem(BaseModel):
     title: str = ""
     summary: str = ""
+    body: str = ""
     url: str = ""
     source: str = ""
     published: str = ""
@@ -29,6 +30,7 @@ class NewsItem(BaseModel):
         return cls(
             title=str(item.get("title", "")),
             summary=str(item.get("summary", item.get("content", "")) or ""),
+            body=str(item.get("body", item.get("content", item.get("summary", ""))) or ""),
             url=str(item.get("url", "") or ""),
             source=str(item.get("source", "") or ""),
             published=str(item.get("published", item.get("published_at", "")) or ""),
@@ -117,3 +119,35 @@ class DigestInputs(BaseModel):
 class DigestResult(BaseModel):
     html: str = ""
     raw: str = ""
+    photo_keys: list[str] = Field(default_factory=list)
+    webcam_links: list[str] = Field(default_factory=list)
+
+
+class FlowState(BaseModel):
+    """Typed state shared across the digest flow lifecycle."""
+
+    request: UserRequest = Field(default_factory=UserRequest)
+    inputs: DigestInputs = Field(default_factory=DigestInputs)
+    digest: DigestResult = Field(default_factory=DigestResult)
+    output_path: str | None = None
+    delivered: bool = False
+    saved: bool = False
+    delivery_status: Literal["pending", "sent", "skipped", "failed"] = "pending"
+    delivery_error: str = ""
+    started_at: str = ""
+    completed_at: str = ""
+    status: Literal[
+        "initialized",
+        "collecting_inputs",
+        "inputs_collected",
+        "rendering_digest",
+        "digest_generated",
+        "routing_delivery",
+        "delivering_email",
+        "email_sent",
+        "email_failed",
+        "email_skipped",
+        "saving_email",
+        "email_saved",
+        "completed",
+    ] = "initialized"

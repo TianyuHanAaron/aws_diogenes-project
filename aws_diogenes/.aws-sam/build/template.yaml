@@ -57,7 +57,7 @@ Resources:
     Type: AWS::Serverless::Function
     Metadata:
       DockerContext: /Users/hantianyu/aws_diogenes/aws_diogenes
-      DockerTag: python3.12-v1
+      DockerTag: python3.12-v2
       Dockerfile: Dockerfile
       SamResourceId: DigestFunction
     Properties:
@@ -107,7 +107,7 @@ Resources:
           - bedrock:InvokeModel
           - bedrock:InvokeModelWithResponseStream
           Resource: '*'
-      ImageUri: digestfunction:python3.12-v1
+      ImageUri: digestfunction:python3.12-v2
   DigestSchedulerRole:
     Type: AWS::IAM::Role
     Properties:

@@ -61,7 +61,7 @@ Resources:
     Metadata:
       Dockerfile: Dockerfile
       DockerContext: .
-      DockerTag: python3.12-v1
+      DockerTag: python3.12-v2
     Properties:
       PackageType: Image
       Architectures:
