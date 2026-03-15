@@ -1,0 +1,14 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "diogenes-sunlight-post-digest"
+resolve_s3 = true
+s3_prefix = "diogenes-sunlight-post-digest"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = false
+parameter_overrides = "ScheduleExpression=\"cron(0 7 * * ? *)\" ScheduleTimezone=\"Australia/Sydney\" DefaultLocation=\"sydney\" DefaultHemisphere=\"southern\" DefaultTopic=\"general news\" DefaultChannels=\"global,interest\" DefaultInterests=\"astronomy\" DefaultEmail=\"your-verified-recipient@example.com\" AwsSesSourceEmail=\"verified-sender@example.com\""
+image_repositories = ["DigestFunction=<your-account>.dkr.ecr.ap-southeast-2.amazonaws.com/<your-repo>"]
+
+[default.global.parameters]
+region = "ap-southeast-2"

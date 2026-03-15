@@ -1,0 +1,302 @@
+seasonal_query_planner_task:
+  description: >
+    Plan the first retrieval expansion for the seasonal section.
+
+    Inputs:
+    - current local date `{current_date}`
+    - review window end `{window_end_date}`
+    - location `{location}`
+    - hemisphere `{hemisphere}`
+    - existing `seasonal_events` search results
+
+    Rules:
+    - plan date-aware searches for upcoming festivals, observances, blossom
+      seasons, and local-country flora that fit the current window
+    - prefer searches that mention the current month, the next two weeks, or
+      the current bloom season
+    - include both worldwide and `{location}`-context queries
+    - generate at most eight queries
+    - avoid duplicates and generic travel-guide phrasing
+
+  expected_output: >
+    JSON object with:
+    - `queries`: array of query objects containing
+      - `query`
+      - `entry_type`
+      - `reason`
+
+  guardrail: >
+    Return only valid JSON. Keep the queries practical for a search API.
+
+  agent: seasonal_query_planner_agent
+
+seasonal_evidence_task:
+  description: >
+    Extract seasonally grounded candidate entries from the retrieved source
+    material.
+
+    Rules:
+    - inspect `seasonal_events` and keep only candidates clearly supported by
+      the retrieved source text
+    - identify two groups:
+      - `festival_candidates`
+      - `flora_candidates`
+    - mark whether each candidate is `upcoming`, `current`, or `past` relative
+      to `{current_date}`
+    - preserve only named festivals, observances, blossom seasons, or flora
+      items with clear seasonal relevance
+    - reject generic directory labels and already-passed events
+    - include a `confidence` label and short `evidence_note` for each candidate
+
+  expected_output: >
+    JSON object with:
+    - `festival_candidates`: array of objects containing
+      - `title`
+      - `date_window`
+      - `region`
+      - `event_type`
+      - `timing_status`
+      - `evidence_note`
+      - `confidence`
+    - `flora_candidates`: array of objects containing
+      - `title`
+      - `flora_type`
+      - `country_or_region`
+      - `seasonal_basis`
+      - `timing_status`
+      - `cultural_significance`
+      - `evidence_note`
+      - `confidence`
+
+  guardrail: >
+    Return only valid JSON. Do not keep expired festivals or off-season flora.
+
+  agent: seasonal_evidence_agent
+
+seasonal_calendar_identification_task:
+  description: >
+    The current local date is `{current_date}` and the review window ends on
+    `{window_end_date}`. Identify exactly two upcoming named festivals,
+    observances, or public holidays that fall on or after the current date and
+    on or before the review-window end date.
+
+    Rules:
+    - prefer globally recognized upcoming festivals or observances
+    - do not mention past events
+    - do not mention expired city anniversaries
+    - return exactly two festivals when possible
+    - the output festivals do not have to be tied to `{location}`
+    - use `seasonal_evidence` as the primary basis rather than free-writing from
+      raw search pages
+
+  expected_output: >
+    JSON array with exactly two festival objects. Each item must contain:
+    - `title`
+    - `date_window`
+    - `region`
+    - `event_type`
+    - `why_relevant`
+
+  guardrail: >
+    Return only valid JSON and two upcoming named festivals or observances.
+    Never return a festival that has already passed relative to `{current_date}`.
+
+  agent: seasonal_calendar_agent
+  context:
+    - seasonal_evidence_task
+
+seasonal_customs_research_task:
+  description: >
+    Research the identified festivals. For each one explain:
+    - its origin or historical basis
+    - the customs or practices associated with it
+    - the regions or communities that actively celebrate it
+
+    Keep the writing factual and specific, and stay grounded in the extracted
+    seasonal evidence.
+
+  expected_output: >
+    JSON array of enriched festival objects. Each item must contain:
+    - `title`
+    - `origin_story`
+    - `customs`
+    - `regions_that_celebrate`
+    - `timing_context`
+
+  guardrail: >
+    Return only valid JSON. Keep the same two named festivals and add factual
+    customs, origin_story, and regional context.
+
+  agent: seasonal_customs_agent
+  context:
+    - seasonal_calendar_identification_task
+
+seasonal_flora_research_task:
+  description: >
+    Determine exactly two flora or bloom-season highlights that fit the user's
+    current date.
+
+    You must return:
+    - one internationally recognizable flower or blossom season
+    - one flora item tied to the user's likely country context `{country_context}`
+
+    For each flora item explain:
+    - the flora name or bloom-season title
+    - why it fits the current seasonal window
+    - the visual or ecological character of the season
+    - any cultural or public significance attached to it
+    - the country or region context
+
+  expected_output: >
+    JSON array of exactly two flora objects. Each item must contain:
+    - `title`
+    - `flora_type`
+    - `country_or_region`
+    - `seasonal_basis`
+    - `description`
+    - `cultural_significance`
+
+  guardrail: >
+    Return only valid JSON and exactly two flora highlights that are seasonally
+    appropriate for the user's date. One must be an internationally recognizable
+    blossom or flower season. One must be tied to the user's country context
+    `{country_context}`, not merely to the city name `{location}`.
+
+  agent: seasonal_flora_agent
+  context:
+    - seasonal_evidence_task
+
+seasonal_retry_task:
+  description: >
+    Decide whether the seasonal retrieval needs one focused second pass and, if
+    so, plan a few follow-up search queries.
+
+    Rules:
+    - inspect `seasonal_evidence`
+    - if there are already enough strong upcoming festival and flora candidates,
+      return an empty query list
+    - otherwise generate a few targeted queries to fill the missing gaps
+    - prefer date-specific and bloom-specific searches
+    - generate at most six retry queries
+
+  expected_output: >
+    JSON object with:
+    - `queries`: array of query objects containing
+      - `query`
+      - `entry_type`
+      - `reason`
+
+  guardrail: >
+    Return only valid JSON. Return an empty `queries` array if the evidence is
+    already sufficient.
+
+  agent: seasonal_retry_agent
+  context:
+    - seasonal_evidence_task
+
+seasonal_summary_task:
+  description: >
+    Convert the researched festivals and the researched flora highlights into
+    four digest-ready entries.
+
+    Requirements:
+    - two paragraphs for the festivals
+    - two paragraphs for the flora items
+    - each paragraph should be complete but concise
+    - aim for roughly 55 to 85 words per entry
+    - use this variation angle for the writing order and emphasis:
+      `{variation_angle}`
+    - let `{variation_seed}` push you toward a slightly different factual
+      emphasis than a previous run, but do not change the underlying facts
+    - the festival paragraph must explain what the event is, where it is
+      celebrated, and how it is commonly marked
+    - the flora paragraph must explain what the flora is, why it is seasonal
+      now, and its cultural significance
+    - when the same festival or flora could appear in another run, vary the
+      sentence order and which factual detail is introduced first
+    - each entry must include a short `focus` string in this exact style:
+      `Topic A - Topic B`
+    - each entry must include an `image_query` string that would help find a
+      representative editorial image for the festival or flora
+
+  expected_output: >
+    JSON array of exactly four entries. Each entry must contain:
+    - `title`
+    - `badge`
+    - `paragraph`
+    - `focus`
+    - `image_query`
+
+  guardrail: >
+    Return only valid JSON. Output exactly four entries: two upcoming festivals,
+    one internationally recognizable flower or blossom highlight, and one flora
+    entry tied to the user's country context `{country_context}` rather than
+    only the city name `{location}`. Keep the paragraphs brief and informative,
+    and keep every `focus` line short and readable.
+
+  agent: seasonal_summary_agent
+  context:
+    - seasonal_customs_research_task
+    - seasonal_flora_research_task
+
+seasonal_final_review_task:
+  description: >
+    Review the draft seasonal entries and prepare the final set for layout.
+
+    Rules:
+    - keep exactly four entries whenever possible
+    - keep exactly two upcoming festivals or observances and two flora entries
+    - remove any event that has already passed relative to `{current_date}`
+    - remove generic placeholders, directory labels, or non-event titles
+    - keep each paragraph concise, factual, and clearly readable in an email
+    - keep festival entries clearly identified as festivals or observances
+    - keep one flora entry clearly international and one clearly tied to the
+      user's country context `{country_context}`, not just `{location}`
+    - preserve strong titles and short informative paragraphs
+    - preserve a short `focus` string in the form `Topic A - Topic B`
+    - preserve or improve a representative `image_query` string for each entry
+    - preserve the requested variation angle `{variation_angle}` so repeated
+      runs do not all read with the same cadence
+    - vary phrasing and ordering from common stock explanations, while keeping
+      every statement factual and grounded in the researched entry
+
+  expected_output: >
+    JSON array of exactly four reviewed entries. Each entry must contain:
+    - `title`
+    - `badge`
+    - `paragraph`
+    - `focus`
+    - `image_query`
+
+  guardrail: >
+    Return only valid JSON. Output exactly two upcoming festivals and two flora
+    highlights, all concise and publishable.
+
+  agent: seasonal_final_review_agent
+  context:
+    - seasonal_summary_task
+
+seasonal_layout_task:
+  description: >
+    Format the four seasonal digest entries into final HTML blocks for insertion
+    into the email template. Use one event block per entry with this structure:
+    - `div.event`
+    - `span.badge`
+    - one image using the provided `image_url`
+    - a strong title
+    - a short `Focus:` line
+    - a full paragraph
+
+    Output only the HTML fragment.
+
+  expected_output: >
+    HTML fragment containing exactly four event blocks.
+
+  guardrail: >
+    Return only HTML. The fragment must contain exactly four event blocks: two
+    festival entries and two flora highlights. Every block must include one real
+    image tag, one `Focus:` line, and the provided `image_url`.
+
+  agent: seasonal_layout_agent
+  context:
+    - seasonal_final_review_task

@@ -1,0 +1,15 @@
+.DS_Store
+.env
+.venv/
+.vscode/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.mypy_cache/
+.pytest_cache/
+.aws-sam/
+.crewai_storage/
+email_digest.html
+src/data/user_profiles.json
+samconfig.toml

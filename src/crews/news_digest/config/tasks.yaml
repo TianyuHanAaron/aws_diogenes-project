@@ -1,0 +1,456 @@
+news_query_planner_task:
+  description: >
+    Plan the first retrieval expansion for this digest.
+
+    Inputs:
+    - current selected channels
+    - user location `{location}`
+    - topic
+    - interests
+    - a small `seed_news` snapshot from the already fetched pool
+
+    Rules:
+    - return practical search queries that could improve coverage accuracy
+    - generate channel-specific retrieval intent:
+      - `global`: front-page international politics, conflict, regulation,
+        diplomacy, war, sanctions, government action, technological policy,
+        climate policy, international institutions, and public policy with
+        clear cross-border consequence
+      - `investment`: markets, rates, inflation, earnings, capital flows,
+        commodities, currencies, central banks, trade, company financing,
+        fiscal policy, monetary policy, market-moving regulation, and major
+        corporate developments with direct investor relevance
+      - `interest`: the user's interest fields themselves
+      - `local`: only `{location}` and its immediate metro or regional area
+    - when both `global` and `investment` are selected, deliberately keep the
+      query families separate:
+      - `global` should search for public events and policy consequence, not
+        generic stock performance, analyst takes, or lifestyle business stories
+      - `investment` should search for market mechanism and financial effect,
+        not general diplomacy or conflict unless the query explicitly includes
+        the market, trade, rate, commodity, earnings, or regulatory angle
+    - do not let `{location}` shape `global`, `investment`, or `interest`
+    - if `global` is selected, aim for at least three strong `global` queries
+      before spending slots on softer channels
+    - if `investment` is selected, aim for at least two strong `investment`
+      queries that name the market, asset, policy, company, or macro angle
+    - use `seed_news` to notice gaps:
+      - if the seed pool is already finance-heavy, push harder on non-finance
+        front-page `global` retrieval
+      - if the seed pool is politics-heavy but lacks market detail, push harder
+        on `investment` retrieval tied to rates, markets, earnings, or trade
+    - generate at most eight queries in total
+    - prefer concise retrieval phrases, not full sentences
+    - avoid repeating near-duplicate queries
+    - prefer query forms that include concrete nouns such as country names,
+      institutions, sectors, policy types, commodities, exchanges, or markets
+
+  expected_output: >
+    JSON object with:
+    - `queries`: array of query objects containing
+      - `query`
+      - `channel`
+      - `reason`
+
+  guardrail: >
+    Return only valid JSON. Keep the queries practical for a news API or
+    general news search endpoint.
+
+  agent: news_query_planner_agent
+
+news_parse_task:
+  description: >
+    Parse the provided raw `news` list into structured factual notes.
+
+    Rules:
+    - extract the actual development from the raw title, summary, and body
+      when body text is available
+    - remove newsletter copy, subscription prompts, marketing lines, and
+      rhetorical framing
+    - identify whether the source item is quote-driven, personality-driven, or
+      event-driven
+    - preserve source id, source name, publication timing, and core topic
+    - identify whether the item describes a headline-grade public development
+      or a minor anecdote
+    - extract only facts that are explicitly grounded in the source text
+    - keep concrete names, institutions, places, dates, and quantities when present
+    - prefer body details over headline wording when body text is available
+
+  expected_output: >
+    JSON array of parsed items. Each item must contain:
+    - `id`
+    - `development`
+    - `actors`
+    - `places`
+    - `topic_tags`
+    - `event_driven`
+    - `quote_driven`
+    - `headline_grade`
+    - `headline_reason`
+    - `fact_points`
+
+  guardrail: >
+    Return only valid JSON. Remove promotional, newsletter, and raw headline
+    noise from the parsed record.
+
+  agent: news_parse_agent
+
+news_event_task:
+  description: >
+    Combine parsed items into distinct events.
+
+    Rules:
+    - merge duplicate coverage of the same real-world development
+    - give each event a clear event statement
+    - keep only events that are actually news developments rather than loose
+      reactions or commentary
+    - do not keep burger wars, social-media spats, newsletter hooks, or
+      celebrity chatter as public events
+    - preserve the strongest grounded facts from the source coverage
+
+  expected_output: >
+    JSON array of events. Each event must contain:
+    - `event_id`
+    - `event_statement`
+    - `source_ids`
+    - `topic_tags`
+    - `headline_grade`
+    - `channels`
+    - `fact_points`
+
+  guardrail: >
+    Return only valid JSON. Do not let the same event appear multiple times
+    under different wrappers.
+
+  agent: news_event_agent
+  context:
+    - news_parse_task
+
+news_rank_task:
+  description: >
+    Rank the events within the selected channels.
+
+    Rules:
+    - `global` must contain only headline-grade geopolitical, military,
+      technological, economic, socioeconomic, political, or regulatory events
+      that plausibly belong on a major source's front page
+    - `interest` must exclude global hard-news unless the core event is truly
+      about the user's interest field itself
+    - `investment` should include markets, rates, central banks, currencies,
+      commodities, earnings, trade, corporate finance, investment flows,
+      fiscal policy, monetary policy, and material business developments
+    - `global` should not absorb pure earnings stories, company launches,
+      routine share moves, analyst calls, or sector trend pieces unless they
+      clearly rise to cross-border public significance
+    - `investment` should not absorb generic diplomacy, military updates, or
+      elections unless the financial, market, regulatory, or trade mechanism
+      is central to the event itself
+    - `global`, `investment`, and `interest` must not be influenced by the
+      user's city choice; only `local` should depend on `{location}`
+    - `local` must refer directly to `{location}` and not merely to the same
+      country, a related community, or a similar policy topic elsewhere
+    - do not place an event in `local` unless the source evidence explicitly
+      names `{location}` or its immediate metro/regional area
+    - sort by significance and consequence
+    - aim for five kept events per selected channel by default
+    - aim for at least eight ranked events in total across the selected
+      channels whenever enough grounded events exist
+    - if non-global selected channels are sparse, keep assigning additional
+      viable headline-grade events to `global` so the total does not stall
+      below eight
+    - if `global` is selected and all other selected channels have no viable
+      events, `global` may expand to ten ranked events
+    - if a channel has fewer than five viable events, keep only the real ones
+      rather than padding the section
+    - when significance is otherwise similar, prefer events backed by two or
+      more distinct `source_ids` over single-source items
+    - preserve the original `event_id` and `source_ids` exactly as they came
+      from the event stage
+
+  expected_output: >
+    JSON object keyed by selected channel. Each event item must contain:
+    - `rank`
+    - `event_id`
+    - `event_statement`
+    - `source_ids`
+
+  guardrail: >
+    Return only valid JSON. Keep global and interest clearly separated and do
+    not rank the same event twice across channels.
+
+  agent: news_rank_agent
+  context:
+    - news_event_task
+
+news_evidence_task:
+  description: >
+    Convert the ranked source material into explicit evidence bundles before
+    long-form writing begins.
+
+    Rules:
+    - work only from `ranked_source_evidence`
+    - for each ranked event, extract the concrete facts actually supported by
+      the linked source snippets
+    - identify:
+      - what happened
+      - who was involved
+      - where it happened
+      - when it happened or when it was announced
+      - what consequences or stakes are explicitly supported
+    - preserve `rank`, `event_id`, and `source_ids`
+    - for `global`, make the evidence explicit about the public event:
+      government action, institutional decision, conflict development,
+      regulatory change, diplomatic move, or cross-border consequence
+    - for `investment`, make the evidence explicit about the financial angle:
+      named company, market, asset class, earnings result, rate decision,
+      trade mechanism, commodity move, capital flow, or investor consequence
+    - include a `confidence` label such as `high`, `medium`, or `low`
+    - include `missing_facts` when the evidence is too thin for a long digest
+    - set `approved` to false when the event is too weak, vague, or not clearly
+      grounded in the linked sources
+    - prefer events backed by two or more linked sources when enough such
+      corroborated events exist
+    - if an event labeled `investment` lacks a clear financial mechanism or
+      investor consequence, mark it weak or unapproved
+    - if an event labeled `global` is really just a company or market story
+      without public-affairs significance, mark it weak or unapproved
+    - never invent bridging facts
+
+  expected_output: >
+    JSON object keyed by channel. Each item must contain:
+    - `rank`
+    - `event_id`
+    - `source_ids`
+    - `event_statement`
+    - `fact_brief`
+    - `key_facts`
+    - `confidence`
+    - `missing_facts`
+    - `approved`
+
+  guardrail: >
+    Return only valid JSON. Every kept evidence record must remain tightly
+    linked to the provided source evidence.
+
+  agent: news_evidence_agent
+  context:
+    - news_rank_task
+
+news_digest_task:
+  description: >
+    Rewrite each ranked event into a calm digest summary.
+
+    Rules:
+    - each summary must be one complete paragraph of roughly 320 to 450 words
+    - explain what happened, how the event developed, who is involved, what
+      concrete facts are known, and why it matters
+    - preserve `event_id` and `source_ids`
+    - every summary must include at least four concrete specifics taken from the
+      source-backed event facts, such as named actors, institutions, places,
+      dates, official decisions, quantities, or policy terms
+    - when `source_ids` contains two or more linked sources, use that wider
+      evidence base to tell the whole story more fully instead of relying on
+      a single-source angle
+    - remove emotional framing, slogans, rhetorical questions, and casual or
+      dramatic expressions
+    - do not include direct quotes, quote fragments, or phrases like
+      `We were ready`, `smoking something`, `shocked`, `stunning`, or
+      `what started with`
+    - do not repeat raw source phrasing in headline form
+    - do not cut off mid-thought
+    - do not invent specifics that were not present in the prior structured stages
+    - write in plain declarative language, even if the result feels dry
+    - rely on `ranked_evidence` as the main factual basis for the final
+      paragraph instead of free-writing from event labels alone
+
+  expected_output: >
+    JSON object keyed by channel. Each item must contain:
+    - `rank`
+    - `event_id`
+    - `source_ids`
+    - `summary`
+
+  guardrail: >
+    Return only valid JSON. Each summary must be a complete paragraph, calm,
+    detailed, source-grounded, and non-duplicative.
+
+  agent: news_digest_agent
+  context:
+    - news_evidence_task
+
+news_validation_task:
+  description: >
+    Validate the digested items.
+
+    Rules:
+    - remove any event that still appears in the wrong channel
+    - remove duplicates across channels
+    - remove summaries that still look like raw headlines or media copy
+    - remove summaries that are too short, abruptly cut off, or emotionally framed
+    - reject any summary shorter than 60 words
+    - remove any event repeated across `global` and `interest`
+    - remove summaries that do not clearly state what happened with concrete
+      grounded details
+    - preserve `source_ids`
+    - for `investment`, allow a broader finance/economic scope so long as the
+      event clearly affects markets, capital, firms, rates, commodities, or policy
+    - for `global`, require that the event still reads like public-affairs or
+      headline-grade world news rather than a market note or corporate brief
+    - do not let `{location}` distort `global`, `investment`, or `interest`
+    - for `local`, reject any item unless `ranked_evidence` clearly ties
+      the event to `{location}` itself rather than another city
+    - compare each summary against `ranked_evidence` and reject it if the
+      paragraph is not clearly supported by that evidence
+    - when two candidate events are similarly strong, prefer the one supported
+      by two or more linked sources
+    - reject any summary that contains direct quotes or casual/emotive phrases
+      such as `We were ready`, `smoking something`, `shocked`, or `to forget`
+
+  expected_output: >
+    JSON object keyed by channel. Each kept item must contain:
+    - `rank`
+    - `event_id`
+    - `source_ids`
+    - `summary`
+    - `approved`
+
+  guardrail: >
+    Return only valid JSON. Only approved, channel-correct, non-duplicated,
+    long-form summaries may survive.
+
+  agent: news_validation_agent
+  context:
+    - news_digest_task
+
+news_retry_task:
+  description: >
+    Decide whether the news retrieval needs one focused second pass and, if so,
+    plan a small set of follow-up queries.
+
+    Rules:
+    - inspect the selected channels and the `ranked_evidence`
+    - if the selected channels already have enough strong evidence, return an
+      empty query list
+    - if a selected channel is missing or weak, create a few targeted follow-up
+      queries for that channel
+    - if `global` is weak because the evidence is too market-heavy, ask for
+      policy, conflict, diplomatic, institutional, or regulatory follow-ups
+    - if `investment` is weak because the evidence is too generic or political,
+      ask for explicit market, rates, commodity, earnings, trade, or policy
+      mechanism follow-ups
+    - never exceed six retry queries in total
+    - do not use `{location}` to shape `global`, `investment`, or `interest`
+    - use `{location}` only for `local`
+    - the goal is to improve factual coverage, not to widen the digest into
+      soft filler
+    - prefer follow-up queries that mention a concrete instrument, institution,
+      sector, company, country, commodity, or policy type
+
+  expected_output: >
+    JSON object with:
+    - `queries`: array of query objects containing
+      - `query`
+      - `channel`
+      - `reason`
+
+  guardrail: >
+    Return only valid JSON. Return an empty `queries` array if the current
+    evidence is already sufficient.
+
+  agent: news_retry_agent
+  context:
+    - news_evidence_task
+
+news_layout_task:
+  description: >
+    Compile the final news structure for rendering.
+
+    Rules:
+    - keep the selected channels separate
+    - preserve ranking order
+    - output up to five events per selected channel by default
+    - aim for at least eight final items in total across all rendered channels
+      whenever enough grounded events survived validation
+    - if the non-global channels do not provide enough validated items, allow
+      `global` to absorb the remaining factual slots before the total falls
+      below eight
+    - when choosing which items survive a crowded channel, prefer events backed
+      by two or more linked sources
+    - if `global` is selected and all other selected channels are empty after
+      validation, output up to ten global events
+    - omit any selected channel that has no valid events after validation
+    - only use approved items
+    - keep `event_id` and `source_ids` in each item so later stages can
+      de-duplicate safely and preserve grounding
+
+  expected_output: >
+    JSON object keyed by selected channel. Each item must contain:
+    - `rank`
+    - `event_id`
+    - `source_ids`
+    - `summary`
+
+  guardrail: >
+    Return only valid JSON. Keep channels cleanly separated and ordered.
+
+  agent: news_layout_agent
+  context:
+    - news_validation_task
+
+news_final_review_task:
+  description: >
+    Perform the final editorial review and produce the exact section payload
+    that will be rendered in the email.
+
+    Rules:
+    - keep only selected channels that still contain valid events
+    - remove empty channels entirely instead of leaving placeholders
+    - remove duplicate events across channels using `event_id`
+    - remove summaries that are vague, generic, or not clearly grounded in the
+      underlying event facts
+    - preserve `source_ids`
+    - for `global`, keep only headline-grade hard-news developments and reject
+      soft, novelty, personality-driven, or culture-war filler
+    - for `investment`, keep materially relevant finance and economic events and
+      do not over-prune borderline but still meaningful market or policy news
+    - for `interest`, keep only events that are genuinely about the user's
+      interest field and not recycled global hard-news
+    - `global`, `investment`, and `interest` must stay independent of the
+      user's city choice; only `local` is city-dependent
+    - for `local`, keep only events clearly tied to `{location}` itself
+    - never include another city's event in `local`, even if it involves a
+      similar institution, community, or issue
+    - remove direct quotes and strip all emotionally loaded or colloquial
+      expressions before final output
+    - verify each final paragraph against `ranked_evidence`; if the
+      output is generic, vague, or not clearly supported by the evidence, drop it
+    - when deciding between similarly strong candidates, keep the event with
+      broader corroboration from two or more linked sources
+    - each kept summary should be a single complete paragraph of roughly
+      320 to 450 words and must contain concrete specifics such as named
+      actors, institutions, places, dates, official decisions, or quantities
+      when available
+    - never keep a summary shorter than 60 words
+    - return up to five items per channel by default
+    - aim for at least eight final items in total across the rendered digest
+      whenever enough grounded events survived the earlier stages
+    - if selected non-global channels are thin, keep more viable `global`
+      events before allowing the total to fall below eight
+    - if `global` is selected and all other selected channels have no valid
+      events, `global` may expand to ten items
+    - re-rank each surviving channel from 1 upward
+
+  expected_output: >
+    JSON object keyed by surviving selected channel. Each item must contain:
+    - `rank`
+    - `event_id`
+    - `source_ids`
+    - `summary`
+
+  guardrail: >
+    Return only valid JSON. Output only publishable sections with grounded,
+    channel-correct, non-duplicated, quote-free summaries.
+
+  agent: news_final_review_agent
+  context:
+    - news_layout_task
